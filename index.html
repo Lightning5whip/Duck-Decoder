@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSTool Duck Decoder (Web版)</title>
+    <style>
+        :root {
+            --primary: #ffbb00;
+            --primary-dark: #e5a800;
+            --bg-start: #667eea;
+            --bg-end: #764ba2;
+            --text: #333;
+            --card: #fff;
+            --success: #52c41a;
+            --error: #ff4d4f;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: var(--card);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            animation: slideUp 0.5s ease-out;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .header h1 {
+            color: #d48806;
+            margin: 0;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .header p {
+            color: #888;
+            margin: 8px 0 0;
+            font-size: 14px;
+        }
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            position: relative;
+            background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%);
+        }
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%);
+            transform: scale(1.02);
+        }
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%);
+        }
+        .upload-area input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .upload-area p {
+            margin: 0;
+            font-size: 16px;
+            color: #666;
+        }
+        .upload-area .hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 8px;
+        }
+        .file-list {
+            margin-bottom: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .file-item img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 12px;
+        }
+        .file-info {
+            flex: 1;
+        }
+        .file-name {
+            font-weight: 500;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        .file-size {
+            font-size: 12px;
+            color: #888;
+        }
+        .file-status {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+        }
+        .file-status.pending { background: #f0f0f0; color: #888; }
+        .file-status.processing { background: #e6f7ff; color: #1890ff; }
+        .file-status.success { background: #f6ffed; color: var(--success); }
+        .file-status.error { background: #fff2f0; color: var(--error); }
+        .file-remove {
+            background: none;
+            border: none;
+            color: #ff4d4f;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px;
+            margin-left: 8px;
+            width: auto;
+            transition: transform 0.2s;
+        }
+        .file-remove:hover {
+            transform: scale(1.2);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        input[type="password"], input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        input[type="password"]:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(255, 187, 0, 0.2);
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            flex: 1;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: #fff;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 187, 0, 0.4);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 187, 0, 0.5);
+        }
+        button.secondary {
+            background: linear-gradient(135deg, #666 0%, #444 100%);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        button.secondary:hover:not(:disabled) {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        #log {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1e1e1e;
+            border-radius: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            height: 150px;
+            overflow-y: auto;
+            color: #0f0;
+            border: none;
+        }
+        .log-time { color: #888; }
+        .log-success { color: #52c41a; }
+        .log-error { color: #ff4d4f; }
+        .log-info { color: #1890ff; }
+        .results-container {
+            margin-top: 25px;
+        }
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .results-header h3 {
+            margin: 0;
+            color: #333;
+        }
+        .download-all-btn {
+            background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            width: auto;
+            flex: none;
+        }
+        .result-item {
+            background: #f9f9f9;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            animation: fadeIn 0.3s ease;
+        }
+        .result-item h4 {
+            margin: 0 0 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .result-media {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            display: block;
+            margin: 0 auto 10px;
+        }
+        .result-actions {
+            text-align: center;
+        }
+        .download-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #333 0%, #111 100%);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }
+        .download-btn:hover {
+            transform: scale(1.05);
+        }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            margin-top: 15px;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar-inner {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, #52c41a 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #888;
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .stat-success { color: var(--success); }
+        .stat-error { color: var(--error); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>🦆 鸭子图解码器</h1>
+        <p>支持批量解码，拖放上传，一键下载</p>
+    </div>
+    
+    <div class="upload-area" id="dropZone">
+        <input type="file" id="fileInput" accept="image/*" multiple>
+        <div class="upload-icon">📁</div>
+        <p>点击选择或拖入鸭子图 (PNG)</p>
+        <p class="hint">支持批量上传多张图片</p>
+    </div>
+
+    <div class="file-list" id="fileList"></div>
+
+    <div class="form-group">
+        <label for="password">🔐 密码 (如果没有请留空)</label>
+        <input type="text" id="password" placeholder="请输入密码...">
+    </div>
+
+    <div class="btn-group">
+        <button id="decodeBtn">🚀 开始解码</button>
+        <button id="clearBtn" class="secondary">🗑️ 清空列表</button>
+    </div>
+
+    <div class="progress-bar" id="progressBar">
+        <div class="progress-bar-inner" id="progressInner"></div>
+    </div>
+    <div class="stats" id="stats" style="display:none;">
+        <span class="stat-item stat-success">✓ 成功: <span id="successCount">0</span></span>
+        <span class="stat-item stat-error">✗ 失败: <span id="errorCount">0</span></span>
+    </div>
+
+    <div class="results-container" id="resultsContainer" style="display:none;">
+        <div class="results-header">
+            <h3>🎉 解码结果</h3>
+        </div>
+        <div id="resultsList"></div>
+    </div>
+
+    <div id="log">等待操作...</div>
+</div>
+
+<script>
+    // Constants from Python code
+    const WATERMARK_SKIP_W_RATIO = 0.40;
+    const WATERMARK_SKIP_H_RATIO = 0.08;
+
+    const logEl = document.getElementById('log');
+    const fileListEl = document.getElementById('fileList');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const resultsList = document.getElementById('resultsList');
+    const progressBar = document.getElementById('progressBar');
+    const progressInner = document.getElementById('progressInner');
+    const statsEl = document.getElementById('stats');
+    
+    let fileQueue = []; // { file, id, status, preview }
+    let fileIdCounter = 0;
+    let successCount = 0;
+    let errorCount = 0;
+    
+    function log(msg, type = 'info') {
+        const time = new Date().toLocaleTimeString();
+        const typeClass = type === 'success' ? 'log-success' : type === 'error' ? 'log-error' : 'log-info';
+        logEl.innerHTML += `<span class="log-time">[${time}]</span> <span class="${typeClass}">${msg}</span>\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function clearLog() {
+        logEl.innerHTML = '';
+    }
+
+    // Drag and drop
+    const dropZone = document.getElementById('dropZone');
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        if (e.target.files && e.target.files.length > 0) {
+            handleFiles(e.target.files);
+            this.value = ''; // Reset for re-upload same files
+        }
+    });
+
+    function handleFiles(files) {
+        for (const file of files) {
+            if (!file.type.startsWith('image/')) {
+                log(`跳过非图片文件: ${file.name}`, 'error');
+                continue;
+            }
+            const id = ++fileIdCounter;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const item = { file, id, status: 'pending', preview: evt.target.result };
+                fileQueue.push(item);
+                renderFileList();
+                log(`已添加: ${file.name}`, 'info');
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function renderFileList() {
+        fileListEl.innerHTML = fileQueue.map(item => `
+            <div class="file-item" data-id="${item.id}">
+                <img src="${item.preview}" alt="preview">
+                <div class="file-info">
+                    <div class="file-name">${item.file.name}</div>
+                    <div class="file-size">${(item.file.size / 1024).toFixed(1)} KB</div>
+                </div>
+                <span class="file-status ${item.status}">${getStatusText(item.status)}</span>
+                <button class="file-remove" onclick="removeFile(${item.id})">×</button>
+            </div>
+        `).join('');
+    }
+
+    function getStatusText(status) {
+        const map = { pending: '等待中', processing: '处理中...', success: '成功', error: '失败' };
+        return map[status] || status;
+    }
+
+    function removeFile(id) {
+        fileQueue = fileQueue.filter(f => f.id !== id);
+        renderFileList();
+    }
+
+    function updateFileStatus(id, status) {
+        const item = fileQueue.find(f => f.id === id);
+        if (item) {
+            item.status = status;
+            renderFileList();
+        }
+    }
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        fileQueue = [];
+        renderFileList();
+        resultsContainer.style.display = 'none';
+        resultsList.innerHTML = '';
+        progressBar.style.display = 'none';
+        statsEl.style.display = 'none';
+        successCount = 0;
+        errorCount = 0;
+        log('已清空文件列表', 'info');
+    });
+
+    document.getElementById('decodeBtn').addEventListener('click', async () => {
+        const password = document.getElementById('password').value;
+
+        if (fileQueue.length === 0) {
+            alert("请先选择图片文件");
+            return;
+        }
+
+        clearLog();
+        log("开始批量处理...", 'info');
+        document.getElementById('decodeBtn').disabled = true;
+        document.getElementById('clearBtn').disabled = true;
+        
+        resultsContainer.style.display = 'none';
+        resultsList.innerHTML = '';
+        progressBar.style.display = 'block';
+        statsEl.style.display = 'flex';
+        successCount = 0;
+        errorCount = 0;
+        updateStats();
+
+        const total = fileQueue.length;
+        let processed = 0;
+
+        for (const item of fileQueue) {
+            updateFileStatus(item.id, 'processing');
+            try {
+                const result = await decodeFile(item.file, password);
+                updateFileStatus(item.id, 'success');
+                successCount++;
+                addResult(item.file.name, result.data, result.ext);
+                log(`✓ ${item.file.name} 解码成功`, 'success');
+            } catch (e) {
+                updateFileStatus(item.id, 'error');
+                errorCount++;
+                log(`✗ ${item.file.name}: ${e.message}`, 'error');
+            }
+            processed++;
+            progressInner.style.width = `${(processed / total) * 100}%`;
+            updateStats();
+        }
+
+        log(`处理完成: ${successCount} 成功, ${errorCount} 失败`, successCount > 0 ? 'success' : 'error');
+        document.getElementById('decodeBtn').disabled = false;
+        document.getElementById('clearBtn').disabled = false;
+        
+        if (successCount > 0) {
+            resultsContainer.style.display = 'block';
+        }
+    });
+
+    function updateStats() {
+        document.getElementById('successCount').textContent = successCount;
+        document.getElementById('errorCount').textContent = errorCount;
+    }
+
+    async function decodeFile(file, password) {
+        const bitmap = await createImageBitmap(file);
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(bitmap, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        let extracted = null;
+        let finalExt = null;
+
+        for (const k of [2, 6, 8]) {
+            try {
+                const payload = extractPayload(imageData, k);
+                if (payload) {
+                    const parsed = await parseHeader(payload, password);
+                    extracted = parsed.data;
+                    finalExt = parsed.ext;
+                    break;
+                }
+            } catch (e) {
+                // Continue trying
+            }
+        }
+
+        if (!extracted) {
+            throw new Error("解码失败，请检查文件或密码");
+        }
+
+        if (finalExt.endsWith('.binpng')) {
+            const pngBlob = new Blob([extracted], { type: 'image/png' });
+            extracted = await binPngToMp4(pngBlob);
+            finalExt = 'mp4';
+        }
+
+        return { data: extracted, ext: finalExt };
+    }
+
+    function addResult(originalName, dataBytes, ext) {
+        ext = ext.toLowerCase().replace('.', '');
+        let mime = 'application/octet-stream';
+        let type = 'file';
+        
+        if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'].includes(ext)) {
+            mime = `image/${ext}`;
+            type = 'image';
+        } else if (['mp4', 'webm', 'mov'].includes(ext)) {
+            mime = `video/${ext === 'mov' ? 'quicktime' : ext}`;
+            type = 'video';
+        }
+
+        const blob = new Blob([dataBytes], { type: mime });
+        const url = URL.createObjectURL(blob);
+        
+        // Generate unique filename
+        const baseName = originalName.replace(/\.[^.]+$/, '');
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2, 6);
+        const downloadName = `${baseName}_decoded_${timestamp}_${randomStr}.${ext}`;
+
+        const resultItem = document.createElement('div');
+        resultItem.className = 'result-item';
+        
+        let mediaHtml = '';
+        if (type === 'image') {
+            mediaHtml = `<img src="${url}" class="result-media" alt="decoded">`;
+        } else if (type === 'video') {
+            mediaHtml = `<video src="${url}" controls class="result-media"></video>`;
+        } else {
+            mediaHtml = `<p style="text-align:center;color:#888;">不支持预览 .${ext} 文件，请下载后查看</p>`;
+        }
+
+        resultItem.innerHTML = `
+            <h4>📄 来源: ${originalName}</h4>
+            ${mediaHtml}
+            <div class="result-actions">
+                <a href="${url}" download="${downloadName}" class="download-btn">⬇️ 下载 ${downloadName}</a>
+            </div>
+        `;
+        
+        resultsList.appendChild(resultItem);
+    }
+
+    // ...existing code for extractPayload, packBits, parseHeader, generateKeyStream, toHex, areArraysEqual, binPngToMp4...
+    
+    function extractPayload(imageData, k) {
+        const { width, height, data } = imageData;
+        const skipW = Math.floor(width * WATERMARK_SKIP_W_RATIO);
+        const skipH = Math.floor(height * WATERMARK_SKIP_H_RATIO);
+        
+        const mask = (1 << k) - 1;
+        let totalBitsFound = [];
+        let readHeader = false;
+        let headerLen = 0;
+        let payloadBitsNeeded = 0;
+
+        for (let i = 0; i < width * height; i++) {
+            const x = i % width;
+            const y = Math.floor(i / width);
+            
+            if (x < skipW && y < skipH) continue;
+
+            for (let c = 0; c < 3; c++) {
+                const val = data[i * 4 + c];
+                const bitsVal = val & mask;
+                
+                for (let b = k - 1; b >= 0; b--) {
+                    const bit = (bitsVal >> b) & 1;
+                    totalBitsFound.push(bit);
+                }
+
+                if (!readHeader && totalBitsFound.length >= 32) {
+                    let lenVal = 0;
+                    for (let j = 0; j < 32; j++) {
+                        lenVal = (lenVal << 1) | totalBitsFound[j];
+                    }
+                    if (lenVal <= 0 || lenVal > 500 * 1024 * 1024) {
+                        throw new Error(`无效的头长度: ${lenVal}`);
+                    }
+                    headerLen = lenVal;
+                    payloadBitsNeeded = 32 + headerLen * 8;
+                    readHeader = true;
+                }
+
+                if (readHeader && totalBitsFound.length >= payloadBitsNeeded) {
+                    return packBits(totalBitsFound.slice(32, payloadBitsNeeded));
+                }
+            }
+            if (readHeader && totalBitsFound.length >= payloadBitsNeeded) break;
+        }
+
+        if (!readHeader) throw new Error("数据不足以读取头长度");
+        if (totalBitsFound.length < payloadBitsNeeded) throw new Error("数据不足以读取完整载荷");
+
+        return null;
+    }
+
+    function packBits(bits) {
+        const bytes = new Uint8Array(Math.floor(bits.length / 8));
+        for (let i = 0; i < bytes.length; i++) {
+            let val = 0;
+            for (let j = 0; j < 8; j++) {
+                val = (val << 1) | bits[i * 8 + j];
+            }
+            bytes[i] = val;
+        }
+        return bytes;
+    }
+
+    async function parseHeader(headerBytes, password) {
+        let idx = 0;
+        if (headerBytes.length < 1) throw new Error("头数据损坏");
+        
+        const hasPwd = headerBytes[idx] === 1;
+        idx++;
+
+        let pwdHash = null;
+        let salt = null;
+
+        if (hasPwd) {
+            if (headerBytes.length < idx + 32 + 16) throw new Error("头数据损坏 (Pwd Block)");
+            pwdHash = headerBytes.slice(idx, idx + 32);
+            idx += 32;
+            salt = headerBytes.slice(idx, idx + 16);
+            idx += 16;
+        }
+
+        if (headerBytes.length < idx + 1) throw new Error("头数据损坏 (Ext Len)");
+        const extLen = headerBytes[idx];
+        idx++;
+
+        if (headerBytes.length < idx + extLen + 4) throw new Error("头数据损坏 (Ext/DataLen)");
+        const extBytes = headerBytes.slice(idx, idx + extLen);
+        const ext = new TextDecoder().decode(extBytes);
+        idx += extLen;
+
+        const view = new DataView(headerBytes.buffer, headerBytes.byteOffset, headerBytes.byteLength);
+        const dataLen = view.getUint32(idx, false);
+        idx += 4;
+
+        let data = headerBytes.slice(idx);
+        if (data.length !== dataLen) throw new Error(`数据长度不匹配: 期望 ${dataLen}, 实际 ${data.length}`);
+
+        if (!hasPwd) {
+            return { data, ext };
+        }
+
+        if (!password) throw new Error("该文件受密码保护，请输入密码");
+
+        const keyMaterial = new TextEncoder().encode(password + toHex(salt));
+        const checkHashBuffer = await crypto.subtle.digest('SHA-256', keyMaterial);
+        const checkHash = new Uint8Array(checkHashBuffer);
+
+        if (!areArraysEqual(checkHash, pwdHash)) {
+            throw new Error("密码错误");
+        }
+
+        const ks = await generateKeyStream(password, salt, data.length);
+        const plain = new Uint8Array(data.length);
+        for (let i = 0; i < data.length; i++) {
+            plain[i] = data[i] ^ ks[i];
+        }
+
+        return { data: plain, ext };
+    }
+
+    async function generateKeyStream(password, salt, length) {
+        const keyMaterial = new TextEncoder().encode(password + toHex(salt));
+        let out = new Uint8Array(length);
+        let generated = 0;
+        let counter = 0;
+
+        while (generated < length) {
+            const counterStr = counter.toString();
+            const combined = new Uint8Array(keyMaterial.length + counterStr.length);
+            combined.set(keyMaterial);
+            combined.set(new TextEncoder().encode(counterStr), keyMaterial.length);
+
+            const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+            const hashArr = new Uint8Array(hashBuffer);
+
+            const take = Math.min(hashArr.length, length - generated);
+            out.set(hashArr.slice(0, take), generated);
+            generated += take;
+            counter++;
+        }
+        return out;
+    }
+
+    function toHex(buffer) {
+        return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
+    }
+
+    function areArraysEqual(a, b) {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) return false;
+        }
+        return true;
+    }
+
+    async function binPngToMp4(pngBlob) {
+        const bitmap = await createImageBitmap(pngBlob);
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        const pixels = canvas.width * canvas.height;
+        const flat = new Uint8Array(pixels * 3);
+        let ptr = 0;
+        for (let i = 0; i < pixels; i++) {
+            flat[ptr++] = imgData.data[i * 4];
+            flat[ptr++] = imgData.data[i * 4 + 1];
+            flat[ptr++] = imgData.data[i * 4 + 2];
+        }
+
+        let end = flat.length;
+        while (end > 0 && flat[end - 1] === 0) {
+            end--;
+        }
+        return flat.slice(0, end);
+    }
+</script>
+
+</body>
+</html>
